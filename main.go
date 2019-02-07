@@ -16,7 +16,7 @@ import (
 
 func getMinioPeersAddr() []string {
 	cmd := "ps -e -o args | grep 'minio server' | grep -v grep | head -n1"
-	out, err := exec.Command("bash", "-c", cmd).Output()
+	out, err := exec.Command("/bin/sh", "-c", cmd).Output()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,10 +72,16 @@ func configureLogging() {
 }
 
 func startPingPeersNLog() {
-	peersAddr := getMinioPeersAddr()
-	if len(peersAddr) < 4 {
-		log.Println("Found peers:", peersAddr)
-		os.Exit(1)
+	var peersAddr []string
+	for {
+		peersAddr = getMinioPeersAddr()
+		if len(peersAddr) < 4 {
+			log.Println("Found peers:", peersAddr, "retrying..")
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		//
+		break
 	}
 
 	var lastOpsMap = sync.Map{}
@@ -97,7 +103,7 @@ func startPingPeersNLog() {
 		lastOpsMap.Store(key, err)
 
 		if shouldPrint {
-			log.Printf("error: <%v> %v ", err, fmt.Sprintln(v...))
+			log.Printf("error (%s): <%v> %v ", key, err, fmt.Sprintln(v...))
 		}
 	}
 
